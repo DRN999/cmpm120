@@ -1,15 +1,13 @@
 // play state of the game 
-//
-
 
 var play_state = 
-{
+{// the main play mode 
 	
 	preload: function()
 	{// preload assets
-		console.log('preload'); // loads all files nessary for the level 
-		reference_chart = util.load_image(images);
-		game.load.spritesheet('redfighter', 'assets/img/redfighter.png', 343, 383);
+		
+		util.load_image(images);
+		game.load.spritesheet('redfighter', 'assets/img/redfighter_sprite.png', 343, 383);
 		game.load.spritesheet('part', 'assets/img/part.png', 17,17);
 		game.load.spritesheet('ophanim_sprite', 'assets/img/ophanim_sprite.png', 167, 114 );
 		game.load.audio('music_1', 'assets/audio/game_maoudamashii_7_rock51.ogg');
@@ -23,71 +21,66 @@ var play_state =
 	create: function()
 	{// create play_state
 		
-		console.log('create');
-		///*
+		//music init 
 		music_1 = game.add.audio('music_1');
 		music_1.volume = 0.1;
 		music_1.loop = true;
 		music_1.addMarker('restart', 0.3, 54, 0.1, true);
 		music_1.play('restart', 0, 0.1, true, true);
-		//*/
-
+		
+		// boost sound init 
 		boost_sound = game.add.audio('boost_sound');
 		boost_sound.volume = 0.08;
 		shoot_sound = game.add.audio('shoot_sound');
 		shoot_sound.volume = 0.03;
+		
+		// hit sound init 
 		hit_sound = game.add.audio('hit_sound');
 		hit_sound.volume = 0.2;
 		hit_sound.addMarker('start', 0.1, 2, 0.1, false);
 		
-		
 		//create scene 
 		game.physics.startSystem(Phaser.Physics.P2JS);
-		sky = game.add.sprite(0, 0, 'space');
-		//sky.angle = 90;
-		sky.height = game.world.height;
-		sky.width = game.world.width;
+		space = game.add.sprite(0, 0, 'space');
+		space.height = game.world.height;
+		space.width = game.world.width;
 		
+		// init particle emitter for the space look 
 		var emitter = game.add.emitter(game.world.centerX, 0, 400);
 		emitter.width = game.world.width;
-		// emitter.angle = 30; // uncomment to set an angle for the rain.
-
 		emitter.makeParticles('part');
-		emitter.forEach(function (p)
-		{
-			p.tint = 0xEEEEEE;
-		});
+		emitter.forEach((p)=>{p.tint = 0xEEEEEE;});
 		emitter.maxParticles = 25;
 		emitter.minParticleScale = 0.1;
 		emitter.maxParticleScale = 0.5;
-
 		emitter.setYSpeed(300, 500);
 		emitter.setXSpeed(-5, 5);
-
 		emitter.minRotation = 0;
 		emitter.maxRotation = 0;
-		
 		emitter.start(false, 1600, 5, 0);
 		
-		
+		// init shooting group 
 		shots = game.add.group();
 		shots.enableBody = true;
 		shots.damage = 10;
 		game.physics.arcade.enable(shots);
 		
+		// init enemy group 
 		enemies = game.add.group();
 		enemies.enableBody = true;
 		
+		// timer for general gameplay 
 		timer_skirmish = game.time.create(false);
 		timer_skirmish.loop(2000, this.skirmish, this);
 		timer_skirmish.start();
 		
+		// timer for the shooting mechanic 
 		timer_shoot = game.time.create(false);
 		timer_shoot.loop(100, this.shoot, this);
 		
+		// timer for when the player gets damaged 
 		timer_damaged = game.time.create(false);
 		timer_damaged.loop(1000, this.stop_damaged, this);
-		//timer_move.start();
 		
 		// create player
 		player = game.add.sprite(0, game.world.height - 250, 'redfighter', 4); // set player 150px above the ground 
@@ -106,6 +99,7 @@ var play_state =
 		player.health = 100;
 		player.damaged = false;
 		
+		//player animation 
 		var left = player.animations.add('left', [3, 2, 1, 0], 20, true); // sets the animation sprites of the spritesheet 
 		left.onLoop.add(this.animation_stop, this);
 		left.loop = false;
@@ -113,6 +107,8 @@ var play_state =
 		right.onLoop.add(this.animation_stop, this);
 		right.loop = false;
 		
+		// init keyinput 
+		// shooting input 
 		var shooting = game.input.keyboard.addKey(Phaser.Keyboard.NUMPAD_1);
 		shooting.onDown.add(() => { 
 
@@ -123,6 +119,7 @@ var play_state =
 		}, this);
 		shooting.onUp.add(() => { timer_shoot.stop(false);}, this);
 		
+		// boost input 
 		var boosting = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 		boosting.onDown.add(() => { 
 			player.boost = true;
@@ -133,6 +130,7 @@ var play_state =
 			
 		}, this);
 		
+		// w,up input 
 		var w_press = game.input.keyboard.addKey(Phaser.Keyboard.W);
 		w_press.onDown.add(() => {
 			player.move_up = true;
@@ -141,6 +139,7 @@ var play_state =
 			player.move_up = false;
 		}, this);
 		
+		// a,left input 
 		var a_press = game.input.keyboard.addKey(Phaser.Keyboard.A);
 		a_press.onDown.add(() => {
 			player.move_left = true;
@@ -150,6 +149,7 @@ var play_state =
 			player.move_left = false;
 		}, this);
 		
+		// s,down input 
 		var s_press = game.input.keyboard.addKey(Phaser.Keyboard.S);
 		s_press.onDown.add(() => {
 			player.move_down = true;
@@ -159,6 +159,7 @@ var play_state =
 			player.move_down = false;
 		}, this);
 		
+		// d,right input  
 		var d_press = game.input.keyboard.addKey(Phaser.Keyboard.D);
 		d_press.onDown.add(() => {
 			player.move_right = true;
@@ -179,24 +180,24 @@ var play_state =
 	
 	update: function() 
 	{// run game loop
-		//console.log('update');
+		
 		score++;
 		
 		this.move_player();
 		this.move_shots();
-		this.move_ophanims();
+		this.move_enemies();
 		
 		livesText.setText('health: ' + player.health + ' damaged: ' + player.damaged);
 		scoreText.setText('score: ' + score); // increase the score by time 
 		//barrierText.setText('barrier: ' + parseInt(barrier)); // update the text of the data 
 		
-		game.physics.arcade.overlap(shots, enemies, this.attack_enemy, null, this); // calls collect_obj, if player and diamond overlap 
+		game.physics.arcade.overlap(shots, enemies, this.attack_enemy, null, this);
 		game.physics.arcade.overlap(player, enemies, this.player_hit , null, this);
 		
-	},
+	}, // End update 
 	
 	player_hit: function(play, enem)
-	{
+	{// when the player gets hit by an enemy 
 		if(!player.damaged)
 		{
 			player.health -= enem.damage;
@@ -208,10 +209,10 @@ var play_state =
 			player.damaged = true;
 			timer_damaged.start();
 		}
-	},
+	}, // End player_hit 
 	
 	stop_damaged: function() 
-	{
+	{// timer function 
 		player.damaged = false;
 		timer_damaged.stop(false);
 	},
@@ -251,7 +252,8 @@ var play_state =
 	move_shots: function()
 	{// moves the shots fired by the ship 
 		shots.forEach((shot) => {
-			try {
+			try 
+			{
 				shot.body.y -= 30;
 				if (shot.body.y < -20)
 				{
@@ -266,7 +268,7 @@ var play_state =
 	}, // End move_shot
 	
 	skirmish: function()
-	{
+	{// timer function that takes cares of normal enemy spawn 
 		var num = util.rand_int(1, 3);
 		for(var i = 0; i < num; i++)
 		{
@@ -282,16 +284,16 @@ var play_state =
 				util.rand_int(0, 1) ? 1 : -1// down direction
 			);
 		}
-	},
+	}, // End skirmish 
 	
 	shoot: function()
-	{
+	{// timer function for shooting 
 		shots.create(player.body.x + 26, player.body.y + 10, 'part');
 		shoot_sound.play();
-	},
+	}, /// End shoot 
 	
 	move_player: function()
-	{
+	{// update function for player movement 
 		player.body.velocity.x = 0;
 		player.body.velocity.y = 0;
 		var vel =  player.boost ? player.boost_velocity : player.velocity;
@@ -318,10 +320,10 @@ var play_state =
 		{
 			player.animations.frame = 4;
 		}
-	},
+	}, // End move_player 
 	
 	spawn_ophanim: function(p, opha_x, opha_y, o_x, o_y, spd, o_spd, dwn_dir)
-	{
+	{// spawn an ophanim with the parameter 
 		var opha = enemies.create(opha_x, opha_y, 'ophanim_sprite')
 		var hit = opha.animations.add('hit', [1,0,1,0], 30, true);
 		hit.onComplete.add((sprite, animation) => {
@@ -340,76 +342,83 @@ var play_state =
 			theta: 0, 
 			rad: 0,
 		};
+		opha.type = 0;
 		opha.damaged = false;
 		opha.damage = 30;
 		opha.health = 50;
 		opha.points = 500;
 		opha.scale.setTo(0.5, 0.5);
-	},
+	}, // End spawn_ophanim 
 	
-	move_ophanims: function()
-	{
+	move_enemies: function()
+	{// update functions for enemy movements 
 		try
-		{
-			enemies.forEach((opha) => { 
-				var pat = opha.type_mode.pattern;
-				console.log(opha);
-				switch(pat)
+		{// try for each enemy type 
+			enemies.forEach((enem) => { 
+				switch(enem.type)
 				{
-					case 0: 
-						opha.body.y += opha.type_mode.speed;
-						if(opha.body.y > game.world.height)
-							opha.kill();
-					break;
-						
-					case 1: 
-						if(opha.body.y < opha.type_mode.orig_y && !opha.type_mode.orbit)
-						{
-							opha.body.y += opha.type_mode.speed;
-							if(opha.body.y >= opha.type_mode.orig_y)
-							{
-								opha.body.y = opha.type_mode.orig_y;
-								opha.type_mode.rad = opha.body.x - opha.type_mode.orig_x;
-								opha.type_mode.orbit = true;
-							}
-						}
-						else
-						{
-							opha.body.x = (opha.type_mode.rad * Math.cos(opha.type_mode.theta / 180 * Math.PI) + opha.type_mode.orig_x);
-							opha.body.y = (opha.type_mode.rad * Math.sin(opha.type_mode.theta / 180 * Math.PI) + opha.type_mode.orig_y);
-							opha.type_mode.theta -= opha.type_mode.orbit_speed;
-							opha.type_mode.orig_y += opha.type_mode.speed;
-						}
-						if(opha.body.y - Math.abs(opha.type_mode.rad) > game.world.height)
-							opha.kill();
-					break;
-
-					case 2:
-						if(opha.body.y < game.world.height - opha.body.height && !opha.type_mode.turn)
-							opha.body.y += opha.type_mode.speed;
-						else if(opha.type_mode.turn && (opha.body.x <= 0 || opha.body.x >= game.world.width - opha.body.width))
-						{
-							opha.body.y -= opha.type_mode.speed;
-						}
-						else if(opha.body.y >= game.world.height - opha.body.height)
-						{
-							opha.type_mode.turn = true;
-							opha.body.x += opha.type_mode.speed * opha.type_mode.down_direction;
-						}
-						
-						if(opha.type_mode.turn && opha.body.y < 0 - opha.height)
-							opha.kill(); 
-						
-					break;
+					case 0: this.move_ophanim(enem); break;
 				}
+				
 			});	
 		}catch(e)
 		{
 			console.log('error');
 		}
-	},
+	},// End move_ophanims 
 	
-	
+	move_ophanim: function(opha)
+	{// update function for moving ophanims 
+		var pat = opha.type_mode.pattern;
+		switch(pat)
+		{// differentiate the different movement pattern of each ophanims 
+		
+			case 0: // pattern 0: goes straight down 
+				opha.body.y += opha.type_mode.speed;
+				if(opha.body.y > game.world.height)
+					opha.kill();
+			break;
+						
+			case 1: // pattern 1: circles down 
+				if(opha.body.y < opha.type_mode.orig_y && !opha.type_mode.orbit)
+				{// falls down until it reachs the y coordinate of the orbit origin 
+					opha.body.y += opha.type_mode.speed;
+					if(opha.body.y >= opha.type_mode.orig_y)
+					{
+						opha.body.y = opha.type_mode.orig_y;
+						opha.type_mode.rad = opha.body.x - opha.type_mode.orig_x;
+						opha.type_mode.orbit = true;
+					}
+				}
+				else
+				{// orbits the origin as the origin goes down 
+					opha.body.x = (opha.type_mode.rad * Math.cos(opha.type_mode.theta / 180 * Math.PI) + opha.type_mode.orig_x);
+					opha.body.y = (opha.type_mode.rad * Math.sin(opha.type_mode.theta / 180 * Math.PI) + opha.type_mode.orig_y);
+					opha.type_mode.theta -= opha.type_mode.orbit_speed;
+					opha.type_mode.orig_y += opha.type_mode.speed;
+				}
+				if(opha.body.y - Math.abs(opha.type_mode.rad) > game.world.height)
+					opha.kill();
+			break;
+
+			case 2: // pattern 2: goes down until it reaches the bottom, then moves along the wall 
+				if(opha.body.y < game.world.height - opha.body.height && !opha.type_mode.turn)
+					opha.body.y += opha.type_mode.speed;
+				else if(opha.type_mode.turn && (opha.body.x <= 0 || opha.body.x >= game.world.width - opha.body.width))
+				{
+					opha.body.y -= opha.type_mode.speed;
+				}
+				else if(opha.body.y >= game.world.height - opha.body.height)
+				{
+					opha.type_mode.turn = true;
+					opha.body.x += opha.type_mode.speed * opha.type_mode.down_direction;
+				}		
+				if(opha.type_mode.turn && opha.body.y < 0 - opha.height)
+					opha.kill(); 		
+			break;
+			
+		}// End switch	
+	}, // End move_ophanim 
 	
 	
 };

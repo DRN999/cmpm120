@@ -8,7 +8,7 @@ var menu_state =
 	{// will be filled with images for the menu screen 
 		
 		
-	},
+	}, // End preload 
 	
 	create: function()
 	{ // create a system so that the if the player press SPACEBAR, then the game begins 
@@ -16,11 +16,11 @@ var menu_state =
 		game.add.text(16,16, 'Press SPACEBAR to start', {fontSize: '22px', fill:'#FFF'});
 		var space_key = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 		space_key.onDown.addOnce(this.start, this);
-	}, 
+	}, // End create 
 	
 	start: function() 
 	{// changes the state
 		game.state.start('play_state');
-	}
+	}// End start 
 	
 };
