@@ -8,7 +8,7 @@ var game_over =
 	{// will be filled with images for the menu screen 
 		
 		
-	},
+	}, // End preload 
 	
 	create: function()
 	{ // create a system so that the if the player press SPACEBAR, then the game begins 
@@ -18,6 +18,6 @@ var game_over =
 			util.reset();
 			game.state.start('play_state');
 		}, this);
-	}
+	}// End create 
 	
 };
