@@ -11,10 +11,10 @@ var play_state =
 		game.load.spritesheet('part', 'assets/img/part.png', 17,17);
 		game.load.spritesheet('ophanim_sprite', 'assets/img/ophanim_sprite.png', 167, 114 );
 		game.load.audio('music_1', 'assets/audio/game_maoudamashii_7_rock51.ogg');
-		game.load.audio('music_kappa', 'assets/audio/Runninginthe90s.ogg');
 		game.load.audio('boost_sound', 'assets/audio/honoohonoonotama.wav');
 		game.load.audio('shoot_sound', 'assets/audio/shagekishot.wav');
 		game.load.audio('hit_sound', 'assets/audio/small_explosion1.mp3');
+		game.load.audio('player_hit_sound', 'assets/audio/shoot1.mp3');
 		
 	},// End preload 
 	
@@ -38,6 +38,10 @@ var play_state =
 		hit_sound = game.add.audio('hit_sound');
 		hit_sound.volume = 0.2;
 		hit_sound.addMarker('start', 0.1, 2, 0.1, false);
+		
+		// player hit sound init 
+		player_hit_sound = game.add.audio('player_hit_sound');
+		player_hit_sound.volume = 0.2;
 		
 		//create scene 
 		game.physics.startSystem(Phaser.Physics.P2JS);
@@ -83,7 +87,7 @@ var play_state =
 		timer_damaged.loop(1000, this.stop_damaged, this);
 		
 		// create player
-		player = game.add.sprite(0, game.world.height - 250, 'redfighter', 4); // set player 150px above the ground 
+		player = game.add.sprite(350, game.world.height - 250, 'redfighter', 4); // set player 150px above the ground 
 		player.scale.setTo(0.2, 0.2);
 		game.physics.arcade.enable(player);
 		player.body.bounce.y = 0.2;
@@ -106,6 +110,8 @@ var play_state =
 		var right = player.animations.add('right', [5, 6, 7, 8], 20, true);
 		right.onLoop.add(this.animation_stop, this);
 		right.loop = false;
+		var hit_damage = player.animations.add('damaged', [4, 9, 4, 9], 50, true);
+		hit_damage.loop = true;
 		
 		// init keyinput 
 		// shooting input 
@@ -143,7 +149,8 @@ var play_state =
 		var a_press = game.input.keyboard.addKey(Phaser.Keyboard.A);
 		a_press.onDown.add(() => {
 			player.move_left = true;
-			player.animations.play('left');
+			if(!player.damaged)
+				player.animations.play('left');
 		}, this);
 		a_press.onUp.add(() => {
 			player.move_left = false;
@@ -153,7 +160,6 @@ var play_state =
 		var s_press = game.input.keyboard.addKey(Phaser.Keyboard.S);
 		s_press.onDown.add(() => {
 			player.move_down = true;
-			
 		}, this);
 		s_press.onUp.add(() => {
 			player.move_down = false;
@@ -163,7 +169,8 @@ var play_state =
 		var d_press = game.input.keyboard.addKey(Phaser.Keyboard.D);
 		d_press.onDown.add(() => {
 			player.move_right = true;
-			player.animations.play('right');
+			if(!player.damaged)
+				player.animations.play('right');
 		}, this);
 		d_press.onUp.add(() => {
 			player.move_right = false;
@@ -171,27 +178,40 @@ var play_state =
 		
 		// create player data text
 		scoreText = game.add.text(16,16, 'score: ' + score, {fontSize: '22px', fill:'#FFF'});
-		livesText = game.add.text(16, 40, 'health: ' + player.health,  {fontSize: '22px', fill:'#FFF'});
-		levelText = game.add.text(16, 64, 'level: ' + level,  {fontSize: '22px', fill:'#FFF'});
-		//barrierText = game.add.text(game.world.width - 150, 16, 'barrier: ' + barrier,  {fontSize: '22px', fill:'#FFF'});
+		livesText = game.add.text(16, 40, 'health: ', {fontSize: '22px', fill:'#FFF'});
 		
+		// create health bar 
+		graphics = game.add.graphics(0, 0);
+		graphics.lineStyle(0);
+		graphics.beginFill(0xFF00FF, 1);
+		graphics.drawRect(90, 45, 200, 16);
+		graphics.endFill();
 		
 	},// End create 
 	
 	update: function() 
 	{// run game loop
 		
+		// update the score 
 		score++;
 		
+		// update sprite movement 
 		this.move_player();
 		this.move_shots();
 		this.move_enemies();
 		
-		livesText.setText('health: ' + player.health + ' damaged: ' + player.damaged);
 		scoreText.setText('score: ' + score); // increase the score by time 
-		//barrierText.setText('barrier: ' + parseInt(barrier)); // update the text of the data 
 		
-		game.physics.arcade.overlap(shots, enemies, this.attack_enemy, null, this);
+		//redraw the rectangle that shows the player health 
+		graphics.clear();
+		graphics = game.add.graphics(0, 0);
+		graphics.lineStyle(0);
+		graphics.beginFill(player.health >= 30 ? 0x00FF00 : 0xFF0000, 1); // turns the rect to red when health is low 
+		graphics.drawRect(90, 45, player.health * 2, 16);
+		graphics.endFill();
+		
+		// detect collision of objects 
+		game.physics.arcade.overlap(shots, enemies, this.attack_enemy, null, this); 
 		game.physics.arcade.overlap(player, enemies, this.player_hit , null, this);
 		
 	}, // End update 
@@ -207,6 +227,8 @@ var play_state =
 				game.state.start('game_over');
 			}
 			player.damaged = true;
+			player.animations.play('damaged');
+			player_hit_sound.play();
 			timer_damaged.start();
 		}
 	}, // End player_hit 
@@ -215,6 +237,7 @@ var play_state =
 	{// timer function 
 		player.damaged = false;
 		timer_damaged.stop(false);
+		player.animations.stop(null, true);
 	},
 	
 	
@@ -228,6 +251,7 @@ var play_state =
 	attack_enemy: function(shot, enemy)
 	{// damages enemy when fire hits 
 		
+		score += 5;
 		hit_sound.play('start', 0, 0.1, false, true);
 		if(!enemy.damaged)
 		{
@@ -273,7 +297,8 @@ var play_state =
 		for(var i = 0; i < num; i++)
 		{
 			var pat = util.rand_int(0,2); 
-			this.spawn_ophanim(
+			this.spawn_ophanim
+			(// create a random ophanim 
 				pat, // pattern 
 				pat ? util.rand_int(200, 600) : util.rand_int(0, 750), // opha_x
 				-10, // opha_y
@@ -316,7 +341,8 @@ var play_state =
 		{
 			player.body.velocity.y += vel;
 		}
-		if(!(player.move_right || player.move_left || player.move_up || player.move_down))
+		
+		if(!(player.move_right || player.move_left || player.move_up || player.move_down) && !player.damaged)
 		{
 			player.animations.frame = 4;
 		}
@@ -325,7 +351,7 @@ var play_state =
 	spawn_ophanim: function(p, opha_x, opha_y, o_x, o_y, spd, o_spd, dwn_dir)
 	{// spawn an ophanim with the parameter 
 		var opha = enemies.create(opha_x, opha_y, 'ophanim_sprite')
-		var hit = opha.animations.add('hit', [1,0,1,0], 30, true);
+		var hit = opha.animations.add('hit', [1, 0, 1, 0], 30, true);
 		hit.onComplete.add((sprite, animation) => {
 			sprite.damaged = false;
 		}, this);
@@ -420,7 +446,4 @@ var play_state =
 		}// End switch	
 	}, // End move_ophanim 
 	
-	
 };
-
-
